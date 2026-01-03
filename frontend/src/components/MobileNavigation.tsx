@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,12 +16,19 @@ export default function MobileNavigation() {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link 
-              href="/products" 
-              className="text-xl font-bold text-gray-900"
+            <Link
+              href="/products"
+              className="flex items-center"
               onClick={closeMenu}
             >
-              Luccarts Mini Shop
+              <Image
+                src="/luccarts_logo.svg"
+                alt="LucCarts Logo"
+                width={150}
+                height={150}
+                className="h-10 w-auto"
+                priority
+              />
             </Link>
           </div>
 

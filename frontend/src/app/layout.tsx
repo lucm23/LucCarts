@@ -17,9 +17,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Mini Shop - Luccarts",
   description: "A mini ecommerce web application",
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#000000",
   manifest: "/manifest.json",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

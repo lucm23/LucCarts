@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500" fill="none">
+  <defs>
+    <linearGradient id="blue_gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00C6FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0072FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Basket Handle -->
+  <path d="M160 120 L230 50 A 20 20 0 0 1 270 50 L340 120" stroke="url(#blue_gradient)" stroke-width="35" stroke-linecap="round" fill="none"/>
+
+  <!-- Basket Body -->
+  <path d="M100 120 H400 L370 260 H130 Z" fill="url(#blue_gradient)" stroke="url(#blue_gradient)" stroke-width="30" stroke-linejoin="round"/>
+  
+  <!-- Basket Holes (White to simulate cutout) -->
+  <g fill="#ffffff">
+    <!-- Top Row -->
+    <rect x="155" y="140" width="30" height="40" rx="10" />
+    <rect x="205" y="140" width="30" height="40" rx="10" />
+    <rect x="265" y="140" width="30" height="40" rx="10" />
+    <rect x="315" y="140" width="30" height="40" rx="10" />
+    
+    <!-- Bottom Row -->
+    <rect x="155" y="200" width="30" height="40" rx="10" />
+    <rect x="205" y="200" width="30" height="40" rx="10" />
+    <rect x="265" y="200" width="30" height="40" rx="10" />
+    <rect x="315" y="200" width="30" height="40" rx="10" />
+  </g>
+
+  <!-- Wheels and Axle -->
+  <g transform="translate(0, 290)">
+      <!-- Axle -->
+     <path d="M170 35 H330" stroke="url(#blue_gradient)" stroke-width="30" stroke-linecap="round" />
+     <!-- Wheels -->
+     <circle cx="170" cy="35" r="35" stroke="url(#blue_gradient)" stroke-width="20" fill="none" />
+     <circle cx="330" cy="35" r="35" stroke="url(#blue_gradient)" stroke-width="20" fill="none" />
+  </g>
+
+  <!-- Text -->
+  <g transform="translate(40, 470)" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="90">
+    <text x="0" y="0" fill="#000000" letter-spacing="-2">Luc</text>
+    <text x="155" y="0" fill="url(#blue_gradient)" letter-spacing="-2">Carts</text>
+    <!-- Register Mark -->
+    <text x="370" y="-30" fill="url(#blue_gradient)" font-size="20">®</text>
+  </g>
+</svg>
