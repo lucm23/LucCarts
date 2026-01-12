@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 export default function PWAInstaller() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
+      /*
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
@@ -13,6 +14,7 @@ export default function PWAInstaller() {
         .catch((registrationError) => {
           console.log('SW registration failed: ', registrationError);
         });
+      */
     }
   }, []);
 

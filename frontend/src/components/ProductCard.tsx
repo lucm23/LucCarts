@@ -15,7 +15,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <img
-        src={product.image}
+        src={product.image || "https://via.placeholder.com/300?text=No+Image"}
         alt={product.name}
         className="w-full h-48 sm:h-56 object-cover"
       />

@@ -1,11 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 export default function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
+
+    // Listen for auth changes (e.g. sign in/out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    // Router refresh handled by logic or just state update
+    closeMenu();
+  };
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
@@ -46,12 +71,21 @@ export default function MobileNavigation() {
             >
               Cart
             </Link>
-            <Link
-              href="/login"
-              className="bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
-            >
-              Login
-            </Link>
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                Login
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -98,13 +132,22 @@ export default function MobileNavigation() {
               >
                 Cart
               </Link>
-              <Link
-                href="/login"
-                className="block px-3 py-3 rounded-md text-base font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                onClick={closeMenu}
-              >
-                Login
-              </Link>
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left px-3 py-3 rounded-md text-base font-medium bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="block px-3 py-3 rounded-md text-base font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                  onClick={closeMenu}
+                >
+                  Login
+                </Link>
+              )}
             </div>
           </div>
         )}
