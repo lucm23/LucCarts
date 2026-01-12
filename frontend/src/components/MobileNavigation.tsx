@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { Icons } from '@/components/Icons';
 
 export default function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -71,21 +72,12 @@ export default function MobileNavigation() {
             >
               Cart
             </Link>
-            {user ? (
-              <button
-                onClick={handleSignOut}
-                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Sign Out
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
-              >
-                Login
-              </Link>
-            )}
+            <Link
+              href="/profile"
+              className="text-gray-700 hover:text-[#007AFF] transition-colors"
+            >
+              <Icons.User className="w-6 h-6" />
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -132,22 +124,13 @@ export default function MobileNavigation() {
               >
                 Cart
               </Link>
-              {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="block w-full text-left px-3 py-3 rounded-md text-base font-medium bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
-                >
-                  Sign Out
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  className="block px-3 py-3 rounded-md text-base font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                  onClick={closeMenu}
-                >
-                  Login
-                </Link>
-              )}
+              <Link
+                href="/profile"
+                className="block px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                onClick={closeMenu}
+              >
+                Profile
+              </Link>
             </div>
           </div>
         )}

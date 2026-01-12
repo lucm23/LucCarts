@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Icons } from '@/components/Icons';
+import Link from 'next/link';
 
 export default function LoginPage() {
 
@@ -133,6 +134,13 @@ export default function LoginPage() {
           >
             {isLoading ? 'Processing...' : 'Log in'}
           </button>
+
+          {/* Link to Signup */}
+          <div className="text-center mt-4">
+            <Link href="/signup" className="text-sm text-gray-500 hover:text-[#007AFF]">
+              Don't have an account? Sign Up
+            </Link>
+          </div>
         </form>
       </div>
     </div>
