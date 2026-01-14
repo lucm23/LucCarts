@@ -5,41 +5,72 @@ import { useCart } from '@/store/cart';
 import { formatCurrency } from '@/lib/currency';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 
 export default function CheckoutPage() {
   const { items, remove, setQty, clear, totalCents } = useCart();
   const router = useRouter();
-  
+
   const subtotal = totalCents();
   const taxRate = 0.0825; // 8.25% tax
   const tax = Math.round(subtotal * taxRate);
   const total = subtotal + tax;
 
-  const handlePayment = () => {
-    // Generate order ID
-    const orderId = `ORD-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-    
-    // Create receipt object
-    const receipt = {
-      id: orderId,
-      items: items.map(item => ({
-        id: item.product.id,
-        name: item.product.name,
-        qty: item.qty,
-        price: item.product.price,
-      })),
-      subtotal,
-      tax,
-      total,
-      createdAt: new Date().toISOString(),
-    };
-    
-    // Save to localStorage
-    localStorage.setItem(`receipt:${orderId}`, JSON.stringify(receipt));
-    
-    // Clear cart and navigate to receipt
-    clear();
-    router.push(`/receipt/${orderId}`);
+  const handlePayment = async () => {
+    try {
+      const supabase = createClient();
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert('Please log in to complete your purchase');
+        router.push('/login?redirect=/checkout');
+        return;
+      }
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_amount: (total / 100).toFixed(2), // Convert cents to dollars
+          status: 'paid'
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating order:', orderError);
+        alert('Failed to create order. Please try again.');
+        return;
+      }
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: parseInt(item.product.id),
+        quantity: item.qty,
+        price_at_purchase: item.product.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('Error creating order items:', itemsError);
+        alert('Failed to save order items. Please contact support.');
+        return;
+      }
+
+      // Clear cart and navigate to receipt
+      clear();
+      router.push(`/receipt/${order.id}`);
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      alert('An unexpected error occurred. Please try again.');
+    }
   };
 
   if (items.length === 0) {
@@ -62,7 +93,7 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2">
@@ -106,12 +137,12 @@ export default function CheckoutPage() {
             ))}
           </div>
         </div>
-        
+
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -127,7 +158,7 @@ export default function CheckoutPage() {
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
-            
+
             <button
               onClick={handlePayment}
               className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-medium"

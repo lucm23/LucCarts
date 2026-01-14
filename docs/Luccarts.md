@@ -19,14 +19,17 @@
 
 ## 2) Tech Stack
 
-* **Runtime/Framework:** Next.js (App Router), React 18
+* **Runtime/Framework:** Next.js 15 (App Router), React 19
 * **Language:** TypeScript
-* **Styling:** Tailwind CSS
-* **State:** Zustand (with `persist` middleware to `localStorage`)
-* **Routing/Protection:** Next.js **middleware** + cookie check
+* **Styling:** Tailwind CSS v4
+* **State:** Zustand (with `persist` middleware to `localStorage` for cart)
+* **Database:** Supabase (PostgreSQL with Row Level Security)
+* **Authentication:** Supabase Auth
+* **Routing/Protection:** Next.js **middleware** + Supabase session check
 * **Formatting & Linting:** Preconfigured by `create-next-app` (ESLint)
+* **Icons:** React Icons
 
-> Runs entirely on **localhost** (no external APIs required). Images use placeholder URLs.
+> Runs on **localhost** with Supabase cloud database. Product images use Amazon and Unsplash URLs.
 
 ---
 
@@ -35,31 +38,40 @@
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
 │                            Browser (CSR)                         │
-│  - Login form sets cookie (dev)                                  │
-│  - Products grid (client)                                        │
+│  - Login via Supabase Auth                                       │
+│  - Products grid (server-rendered from DB)                       │
 │  - Cart state via Zustand → localStorage                         │
-│  - Checkout triggers receipt creation → localStorage             │
-│  - Receipt page reads receipt by ID → printable                  │
+│  - Checkout creates order → Supabase database                    │
+│  - Receipt page reads from localStorage (legacy)                 │
 └───────────────▲───────────────────────────────────────────▲──────┘
                 │                                           │
-                │ Cookies (mock auth)                       │ localStorage (cart, receipts)
+                │ Supabase Session                          │ localStorage (cart only)
                 │                                           │
 ┌───────────────┴───────────────────────────────────────────┴──────┐
 │                        Next.js App Router                        │
 │  - Route handlers/pages: /login, /products, /checkout, /receipt  │
 │  - Shared layout & nav                                           │
-│  - Middleware guards protected paths                             │
+│  - Middleware guards protected paths via Supabase session        │
 │  - Server/Client components where appropriate                    │
+└───────────────────────────────┬──────────────────────────────────┘
+                                │
+                                │ Supabase Client SDK
+                                │
+┌───────────────────────────────▼──────────────────────────────────┐
+│                         Supabase (Cloud)                         │
+│  - PostgreSQL Database (products, orders, order_items, profiles) │
+│  - Row Level Security (RLS) policies                             │
+│  - Authentication & Session Management                           │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Flows
 
-* **Auth:** client login sets `mini_session=true` cookie → **middleware** redirects unauthenticated users from `/products`, `/checkout`, `/receipt/*` to `/login`.
-* **Catalog:** in‑repo `products.ts` exports product array → rendered in grid via `ProductCard` components.
+* **Auth:** Supabase Auth handles login/signup → **middleware** checks Supabase session and redirects unauthenticated users from `/products`, `/checkout`, `/receipt/*` to `/login`.
+* **Catalog:** Products fetched from Supabase `products` table (server component) → rendered in grid via `ProductCard` components.
 * **Cart:** `useCart` (Zustand store) tracks items `{ product, qty }`, persists via `localStorage`.
-* **Checkout:** computes subtotal + tax, then **"Pay with Prop Money"** creates a receipt object and saves it to `localStorage` under `receipt:<ORDER_ID>`; clears the cart and navigates to `/receipt/<ORDER_ID>`.
-* **Receipt:** reads the stored object, renders line items and totals; includes **Print** action (`window.print()`).
+* **Checkout:** computes subtotal + tax, then **"Pay with Prop Money"** creates order in Supabase `orders` table and order items in `order_items` table; clears the cart and navigates to `/receipt/<ORDER_ID>`.
+* **Receipt:** currently reads from `localStorage` (legacy); **TODO:** migrate to fetch from database.
 
 ---
 
@@ -82,14 +94,19 @@ src/
     ProductCard.tsx         # Reusable product card (client)
 
   lib/
-    products.ts             # Local catalog data + types
+    products.ts             # Product types (data now from Supabase)
     currency.ts             # USD formatting helper
     auth.ts                 # Cookie helpers + middleware utilities
 
   store/
     cart.ts                 # Zustand store (+persist) for cart state
 
-middleware.ts               # Route protection for /products, /checkout, /receipt
+  utils/
+    supabase/
+      client.ts             # Supabase client for client components
+      server.ts             # Supabase client for server components
+
+middleware.ts               # Route protection via Supabase session check
 ```
 
 **Rationale:**
@@ -115,19 +132,23 @@ middleware.ts               # Route protection for /products, /checkout, /receip
 
 ## 6) Data Model
 
-### Product
+### Product (Database Schema)
 
 ```ts
 {
-  id: string,
+  id: number,              // Auto-incrementing primary key
   name: string,
-  price: number, // cents
-  image: string,
+  price: number,           // cents (integer)
+  image_url: string,
   brand?: string,
   category?: string,
-  rating?: number
+  rating?: number,
+  created_at: timestamp,   // Auto-generated
+  updated_at: timestamp    // Auto-generated
 }
 ```
+
+**Note:** Client-side components receive products with `image_url` mapped to `image` for compatibility.
 
 ### Cart Item
 
@@ -138,11 +159,37 @@ middleware.ts               # Route protection for /products, /checkout, /receip
 }
 ```
 
-### Receipt
+### Order (Database Schema)
 
 ```ts
 {
-  id: string,                          // e.g., ORD-8F2K0WZQ
+  id: number,              // Auto-incrementing primary key
+  user_id: string,         // Foreign key to auth.users
+  total_amount: decimal,   // Total in dollars (e.g., 25.00)
+  status: string,          // 'paid', 'pending', 'cancelled'
+  created_at: timestamp,   // Auto-generated
+  updated_at: timestamp    // Auto-generated
+}
+```
+
+### Order Item (Database Schema)
+
+```ts
+{
+  id: number,              // Auto-incrementing primary key
+  order_id: number,        // Foreign key to orders
+  product_id: number,      // Foreign key to products
+  quantity: number,
+  price_at_purchase: number, // Price in cents at time of purchase
+  created_at: timestamp    // Auto-generated
+}
+```
+
+### Receipt (Legacy - localStorage)
+
+```ts
+{
+  id: string,                          // e.g., order ID from database
   items: { id: string; name: string; qty: number; price: number }[],
   subtotal: number,                    // in cents
   tax: number,                         // in cents
@@ -151,22 +198,28 @@ middleware.ts               # Route protection for /products, /checkout, /receip
 }
 ```
 
+**Note:** Receipt page currently uses localStorage. Migration to database queries is planned.
+
 ---
 
 ## 7) State Management
 
 * **Zustand store** `useCart` keeps `items`, `add`, `remove`, `setQty`, `clear`, `totalCents`.
-* **Persistence:** `persist` middleware uses `localStorage` key `mini-shop-cart`.
-* **Receipts:** Written directly to `localStorage` as `receipt:<ORDER_ID>`; (optional) maintain an index `receipts:index` for a history page.
+* **Cart Persistence:** `persist` middleware uses `localStorage` key `mini-shop-cart`.
+* **Orders:** Stored in Supabase database (`orders` and `order_items` tables) with user association.
+* **Products:** Fetched from Supabase `products` table on each page load (server-side).
+* **Receipts (Legacy):** Currently written to `localStorage` as `receipt:<ORDER_ID>` for backward compatibility.
 
 ---
 
-## 8) Authentication & Authorization (Dev‑Only)
+## 8) Authentication & Authorization
 
-* **Login Strategy:** any email/password accepted. On submit, set `document.cookie = "mini_session=true; path=/"`.
-* **Middleware:** checks for `mini_session=true` cookie on protected paths → otherwise redirects to `/login?redirect=<original>`.
-* **Limitations:** not secure; for demo only. No CSRF/expiry/crypto.
-* **Upgrade Path:** replace with `next-auth` (Credentials or OAuth) or a simple JWT stored in `HttpOnly` cookie via server actions/route handlers.
+* **Auth Provider:** Supabase Auth with email/password authentication.
+* **Session Management:** Supabase handles session tokens via cookies (HttpOnly, Secure).
+* **Middleware:** checks Supabase session on protected paths (`/products`, `/checkout`, `/receipt/*`) → redirects to `/login?redirect=<original>` if unauthenticated.
+* **User Profiles:** Automatically created in `profiles` table via database trigger on signup.
+* **Security:** Production-ready with proper session handling, CSRF protection, and secure cookies.
+* **Future Enhancements:** OAuth providers (Google, GitHub), magic link authentication, password reset flows.
 
 ---
 
@@ -186,8 +239,13 @@ middleware.ts               # Route protection for /products, /checkout, /receip
 ## 10) Business Logic
 
 * **Tax:** fixed 8.25% mock tax (rounded to cents).
-* **Checkout:** "Pay with Prop Money" simulates success, generates an order ID, writes receipt, clears cart, navigates to receipt page.
+* **Checkout:** "Pay with Prop Money" creates order in database with:
+  1. User authentication check
+  2. Order record creation in `orders` table
+  3. Order items creation in `order_items` table
+  4. Cart clearing and navigation to receipt page
 * **Totals:** computed in cents to avoid floating‑point precision issues; formatted via `Intl.NumberFormat`.
+* **Price Preservation:** `price_at_purchase` field in `order_items` preserves historical pricing.
 
 ---
 
@@ -230,7 +288,7 @@ Ensure Tailwind is active in `globals.css` and `tailwind.config.*` includes `./s
 ### Install additional deps
 
 ```bash
-npm i zustand
+npm i zustand @supabase/supabase-js @supabase/ssr react-icons
 ```
 
 ### Run
@@ -271,22 +329,29 @@ npm run dev
 
 ## 15) Extensibility & Future Work
 
-* **Auth:** NextAuth (Credentials/Email/OAuth), session expiry, password rules
-* **Catalog Source:** Move to JSON file or lightweight DB (SQLite) via Prisma
-* **Filters & Search:** query params for category/price/name with memoized selectors
-* **Receipts Index:** `/orders` page that lists `receipts:index` with basic pagination
-* **Payments:** Stripe test mode or fully mocked server route
-* **Server Actions:** for order creation + cookie setting with `HttpOnly`
-* **UI Library:** Integrate shadcn/ui for consistent buttons, inputs, dialogs
-* **Accessibility:** Keyboard navigation, focus rings, aria‑live for cart updates
-* **i18n:** Currency/locale formatting and translations
+* **Receipt Migration:** ✅ **Priority** - Migrate receipt page from localStorage to database queries
+* **Order History:** `/orders` page that displays user's past orders from database
+* **Admin Dashboard:** Product management, order tracking, user management
+* **Auth Enhancements:** OAuth providers (Google, GitHub), magic links, password reset
+* **Filters & Search:** Client-side filtering and search with query params
+* **Real Payments:** Stripe integration for actual payment processing
+* **Inventory Management:** Stock tracking, low inventory alerts
+* **UI Library:** Integrate shadcn/ui for consistent components
+* **Accessibility:** Enhanced keyboard navigation, ARIA labels, screen reader support
+* **i18n:** Multi-language support and locale-specific formatting
+* **Performance:** Image optimization, caching strategies, pagination for large catalogs
 
 ---
 
-## 16) Security Notes (Given Dev Scope)
+## 16) Security Notes
 
-* Current cookie is **not** `HttpOnly`, has no expiry, and is set from the client → **do not** deploy as‑is.
-* For any external demo, switch to server‑set cookies (HttpOnly, Secure, SameSite) and guard POST actions against CSRF.
+* **Production-Ready Auth:** Supabase handles secure session management with HttpOnly cookies.
+* **Row Level Security (RLS):** Database policies ensure users can only access their own orders.
+* **Environment Variables:** Supabase credentials stored in `.env.local` (not committed to git).
+* **HTTPS Required:** Supabase requires HTTPS in production for secure communication.
+* **API Keys:** Using public anon key (safe for client-side); service role key should never be exposed.
+* **Input Validation:** Add server-side validation for order creation and product updates.
+* **Rate Limiting:** Consider implementing rate limiting for API endpoints in production.
 
 ---
 
