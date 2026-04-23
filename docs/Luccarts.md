@@ -1,16 +1,16 @@
-# LucCarts â€“ Architecture & Implementation Guide
+# LucCarts – Architecture & Implementation Guide
 
-> **Scope:** This document describes the complete architecture, user workflow, and implementation details for the **LucCarts** web app built with **Next.js (App Router) + React + TypeScript + Tailwind CSS + Zustand**. The app delivers a full eâ€‘commerce flow endâ€‘toâ€‘end (login â†’ product browsing â†’ cart/checkout â†’ printable receipt) powered by **Supabase Auth** and a **cloud PostgreSQL database**.
+> **Scope:** This document describes the complete architecture, user workflow, and implementation details for the **LucCarts** web app built with **Next.js (App Router) + React + TypeScript + Tailwind CSS + Zustand**. The app delivers a full e‑commerce flow end‑to‑end (login → product browsing → cart/checkout → printable receipt) powered by **Supabase Auth** and a **cloud PostgreSQL database**.
 
 ---
 
-## 1) Highâ€‘Level Overview
+## 1) High‑Level Overview
 
-* **Goal:** Ship a fast, cloud-native eâ€‘commerce platform that demonstrates modern React/Next.js patterns with production-grade infrastructure.
-* **Nonâ€‘Goals:** Real payment processing (mock payments only). Stripe integration is planned.
+* **Goal:** Ship a fast, cloud-native e‑commerce platform that demonstrates modern React/Next.js patterns with production-grade infrastructure.
+* **Non‑Goals:** Real payment processing (mock payments only). Stripe integration is planned.
 * **Core Features:**
 
-  1. **Login & Signup** via Supabase Auth â†’ gates protected routes via **middleware**
+  1. **Login & Signup** via Supabase Auth → gates protected routes via **middleware**
   2. **Products** catalog displayed from Supabase PostgreSQL (server-rendered)
   3. **Cart & Checkout** using **Zustand** with `localStorage` persistence
   4. **Order Records** stored in Supabase with per-order **receipt** pages
@@ -36,39 +36,39 @@
 ## 3) System Architecture
 
 ```text
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                            Browser (CSR)                         â”‚
-â”‚  - Login via Supabase Auth                                       â”‚
-â”‚  - Products grid (server-rendered from DB)                       â”‚
-â”‚  - Cart state via Zustand â†’ localStorage                         â”‚
-â”‚  - Checkout creates order â†’ Supabase database                    â”‚
-â”‚  - Receipt page reads from localStorage (legacy)                 â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â-²â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â-²â”€â”€â”€â”€â”€â”€â”˜
-                â”‚                                           â”‚
-                â”‚ Supabase Session                          â”‚ localStorage (cart only)
-                â”‚                                           â”‚
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
-â”‚                        Next.js App Router                        â”‚
-â”‚  - Route handlers/pages: /login, /products, /checkout, /receipt  â”‚
-â”‚  - Shared layout & nav                                           â”‚
-â”‚  - Middleware guards protected paths via Supabase session        â”‚
-â”‚  - Server/Client components where appropriate                    â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                â”‚
-                                â”‚ Supabase Client SDK
-                                â”‚
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â-¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                         Supabase (Cloud)                         â”‚
-â”‚  - PostgreSQL Database (products, orders, order_items, profiles) â”‚
-â”‚  - Row Level Security (RLS) policies                             â”‚
-â”‚  - Authentication & Session Management                           â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────────┐
+│                            Browser (CSR)                         │
+│  - Login via Supabase Auth                                       │
+│  - Products grid (server-rendered from DB)                       │
+│  - Cart state via Zustand → localStorage                         │
+│  - Checkout creates order → Supabase database                    │
+│  - Receipt page reads from localStorage (legacy)                 │
+└───────────────▲───────────────────────────────────────────▲──────┘
+                │                                           │
+                │ Supabase Session                          │ localStorage (cart only)
+                │                                           │
+┌───────────────┴───────────────────────────────────────────┴──────┐
+│                        Next.js App Router                        │
+│  - Route handlers/pages: /login, /products, /checkout, /receipt  │
+│  - Shared layout & nav                                           │
+│  - Middleware guards protected paths via Supabase session        │
+│  - Server/Client components where appropriate                    │
+└───────────────────────────────┬──────────────────────────────────┘
+                                │
+                                │ Supabase Client SDK
+                                │
+┌───────────────────────────────▼──────────────────────────────────┐
+│                         Supabase (Cloud)                         │
+│  - PostgreSQL Database (products, orders, order_items, profiles) │
+│  - Row Level Security (RLS) policies                             │
+│  - Authentication & Session Management                           │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Flows
 
-* **Auth:** Supabase Auth handles login/signup â†’ **middleware** checks Supabase session and redirects unauthenticated users from `/products`, `/checkout`, `/receipt/*` to `/login`.
-* **Catalog:** Products fetched from Supabase `products` table (server component) â†’ rendered in grid via `ProductCard` components.
+* **Auth:** Supabase Auth handles login/signup → **middleware** checks Supabase session and redirects unauthenticated users from `/products`, `/checkout`, `/receipt/*` to `/login`.
+* **Catalog:** Products fetched from Supabase `products` table (server component) → rendered in grid via `ProductCard` components.
 * **Cart:** `useCart` (Zustand store) tracks items `{ product, qty }`, persists via `localStorage`.
 * **Checkout:** computes subtotal + tax, then **"Pay with Prop Money"** creates order in Supabase `orders` table and order items in `order_items` table; clears the cart and navigates to `/receipt/<ORDER_ID>`.
 * **Receipt:** currently reads from `localStorage` (legacy); **TODO:** migrate to fetch from database.
@@ -116,7 +116,7 @@ middleware.ts               # Route protection via Supabase session check
 
 **Rationale:**
 
-* **App Router** keeps pages coâ€‘located under `app/` with server/client components as needed.
+* **App Router** keeps pages co‑located under `app/` with server/client components as needed.
 * **lib/** hosts pure helpers and typed data.
 * **store/** isolates state logic from components.
 * **middleware.ts** cleanly guards protected routes without duplicating checks in each page.
@@ -127,8 +127,8 @@ middleware.ts               # Route protection via Supabase session check
 
 | Route           | Type                       | Purpose                                   | Auth          |
 | --------------- | -------------------------- | ----------------------------------------- | ------------- |
-| `/login`        | Client page                | Mock signâ€‘in; sets `mini_session` cookie  | Public        |
-| `/products`     | Server page â†’ Client cards | Browse catalog; add to cart               | **Protected** |
+| `/login`        | Client page                | Mock sign‑in; sets `mini_session` cookie  | Public        |
+| `/products`     | Server page → Client cards | Browse catalog; add to cart               | **Protected** |
 | `/checkout`     | Client page                | Edit quantities, see totals, pay (mock)   | **Protected** |
 | `/receipt/[id]` | Client page                | Render printable receipt                  | **Protected** |
 | `/`             | (optional redirect)        | Could redirect to `/login` or `/products` | Public        |
@@ -221,7 +221,7 @@ middleware.ts               # Route protection via Supabase session check
 
 * **Auth Provider:** Supabase Auth with email/password authentication.
 * **Session Management:** Supabase handles session tokens via cookies (HttpOnly, Secure).
-* **Middleware:** checks Supabase session on protected paths (`/products`, `/checkout`, `/receipt/*`) â†’ redirects to `/login?redirect=<original>` if unauthenticated.
+* **Middleware:** checks Supabase session on protected paths (`/products`, `/checkout`, `/receipt/*`) → redirects to `/login?redirect=<original>` if unauthenticated.
 * **User Profiles:** Automatically created in `profiles` table via database trigger on signup.
 * **Security:** Production-ready with proper session handling, CSRF protection, and secure cookies.
 * **Future Enhancements:** OAuth providers (Google, GitHub), magic link authentication, password reset flows.
@@ -230,7 +230,7 @@ middleware.ts               # Route protection via Supabase session check
 
 ## 9) UI & Styling
 
-* **Tailwind CSS** for utilityâ€‘first styling across pages.
+* **Tailwind CSS** for utility‑first styling across pages.
 * **Visual Language:** clean cards, subtle borders/shadows, responsive grid.
 * **Print Styles:** the receipt relies on browser default print; optional `@media print` rules can hide nav.
 * **Accessibility:**
@@ -249,7 +249,7 @@ middleware.ts               # Route protection via Supabase session check
   2. Order record creation in `orders` table
   3. Order items creation in `order_items` table
   4. Cart clearing and navigation to receipt page
-* **Totals:** computed in cents to avoid floatingâ€‘point precision issues; formatted via `Intl.NumberFormat`.
+* **Totals:** computed in cents to avoid floating‑point precision issues; formatted via `Intl.NumberFormat`.
 * **Price Preservation:** `price_at_purchase` field in `order_items` preserves historical pricing.
 
 ---
@@ -266,8 +266,8 @@ middleware.ts               # Route protection via Supabase session check
 ## 12) Performance Considerations
 
 * **Server-Rendered Catalog:** products are fetched from Supabase at the server level, delivering fast initial page loads.
-* **Granular Client Components:** cart & checkout are clientâ€‘only; product list page is a server component rendering client cards.
-* **Persistent Store:** Zustand persistence reduces reâ€‘fetch overhead and enables quick reloads.
+* **Granular Client Components:** cart & checkout are client‑only; product list page is a server component rendering client cards.
+* **Persistent Store:** Zustand persistence reduces re‑fetch overhead and enables quick reloads.
 
 ---
 
@@ -306,7 +306,7 @@ npm run dev
 ### VS Code Tips
 
 * Recommended extensions: **ES7+ React/Redux/TS Snippets**, **Tailwind CSS IntelliSense**
-* Use multiâ€‘cursor and snippet shortcuts for rapid UI scaffolding
+* Use multi‑cursor and snippet shortcuts for rapid UI scaffolding
 
 ---
 
@@ -314,8 +314,8 @@ npm run dev
 
 * **Auth Redirects**
 
-  * Visit `/products` while logged out â†’ redirected to `/login`
-  * Log in â†’ redirected back to original page
+  * Visit `/products` while logged out → redirected to `/login`
+  * Log in → redirected back to original page
 * **Catalog**
 
   * Cards render with name, price, brand, category
@@ -324,7 +324,7 @@ npm run dev
 
   * Quantity edits recalc totals
   * Remove item works; empty cart shows message
-  * Pay â†’ generates order ID and clears cart
+  * Pay → generates order ID and clears cart
 * **Receipt**
 
   * URL like `/receipt/ORD-XXXX` loads with correct items & totals
@@ -334,7 +334,7 @@ npm run dev
 
 ## 15) Extensibility & Future Work
 
-* **Receipt Migration:** âœ… **Priority** - Migrate receipt page from localStorage to database queries
+* **Receipt Migration:** ✅ **Priority** - Migrate receipt page from localStorage to database queries
 * **Order History:** `/orders` page that displays user's past orders from database
 * **Admin Dashboard:** Product management, order tracking, user management
 * **Auth Enhancements:** OAuth providers (Google, GitHub), magic links, password reset
@@ -363,13 +363,13 @@ npm run dev
 ## 17) FAQ
 
 **Q: Why Zustand over Context?**
-A: Simpler API, minimal boilerplate, and built-in `persist` makes cart state tiny and reliable.
+A: Simpler API, minimal boilerplate, and built‑in `persist` makes cart state tiny and reliable.
 
 **Q: Why does the receipt page still use localStorage?**
 A: This is a legacy holdover. Orders are already stored in Supabase. Migrating receipts to fetch from the database is a tracked priority item.
 
 **Q: Can I swap Tailwind for another UI kit?**
-A: Yes -- Tailwind keeps it quick, but you can layer shadcn/ui or Chakra for components.
+A: Yes—Tailwind keeps it quick, but you can layer shadcn/ui or Chakra for components.
 
 ---
 
@@ -377,10 +377,10 @@ A: Yes -- Tailwind keeps it quick, but you can layer shadcn/ui or Chakra for com
 
 * **App Router:** Next.js routing paradigm using `app/` directory with server/client components.
 * **Middleware:** Edge layer that can rewrite/redirect before hitting your route code.
-* **CSR/SSR:** Client-Side Rendering / Server-Side Rendering.
+* **CSR/SSR:** Client‑Side Rendering / Server‑Side Rendering.
 
 ---
 
 ## 19) License & Attribution
 
-* [MIT License](../LICENSE) -- use freely for learning or as a starter template.
+* [MIT License](../LICENSE) — use freely for learning or as a starter template.

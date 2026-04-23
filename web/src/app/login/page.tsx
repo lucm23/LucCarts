@@ -1,19 +1,18 @@
 'use client';
 
 // Mock login (client component)
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Icons } from '@/components/Icons';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/products';
 
@@ -47,8 +46,8 @@ export default function LoginPage() {
       setTimeout(() => {
         window.location.assign(redirectTo);
       }, 500);
-    } catch (err: any) {
-      console.error("Unexpected error:", err);
+    } catch (err: unknown) {
+      console.error('Unexpected error:', err);
       setError("An unexpected error occurred. Check console.");
       setIsLoading(false);
     }
@@ -138,11 +137,19 @@ export default function LoginPage() {
           {/* Link to Signup */}
           <div className="text-center mt-4">
             <Link href="/signup" className="text-sm text-gray-500 hover:text-[#007AFF]">
-              Don't have an account? Sign Up
+              Don&apos;t have an account? Sign Up
             </Link>
           </div>
         </form>
       </div>
     </div>
   );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+            <LoginForm />
+        </Suspense>
+    );
 }

@@ -1,19 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { Icons } from '@/components/Icons';
 import Link from 'next/link';
 
-export default function SignupPage() {
+function SignupForm() {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
     const searchParams = useSearchParams();
     const redirectTo = searchParams.get('redirect') || '/products';
 
@@ -63,7 +61,7 @@ export default function SignupPage() {
                 setIsLoading(false);
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Unexpected error:", err);
             setError("An unexpected error occurred.");
             setIsLoading(false);
@@ -161,5 +159,13 @@ export default function SignupPage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function SignupPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#E5E5E5] flex items-center justify-center">Loading...</div>}>
+            <SignupForm />
+        </Suspense>
     );
 }

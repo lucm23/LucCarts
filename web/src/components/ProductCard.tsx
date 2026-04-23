@@ -1,6 +1,7 @@
 'use client';
 
 // Reusable product card (client)
+import Image from 'next/image';
 import { Product } from '@/lib/products';
 import { formatCurrency } from '@/lib/currency';
 import { useCart } from '@/store/cart';
@@ -14,9 +15,12 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <img
+      <Image
         src={product.image || "https://via.placeholder.com/300?text=No+Image"}
         alt={product.name}
+        width={300}
+        height={300}
+        unoptimized
         className="w-full h-48 sm:h-56 object-cover"
       />
       <div className="p-4 sm:p-6">

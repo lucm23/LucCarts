@@ -3,8 +3,24 @@
 // Printable receipt (client)
 import { use, useEffect, useState } from 'react';
 import { formatCurrency } from '@/lib/currency';
-import { Receipt } from '@/store/cart';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
+
+interface ReceiptItem {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+}
+
+interface OrderData {
+  id: string;
+  items: ReceiptItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  createdAt: string;
+}
 
 interface ReceiptPageProps {
   params: Promise<{ id: string }>;
@@ -12,15 +28,81 @@ interface ReceiptPageProps {
 
 export default function ReceiptPage({ params }: ReceiptPageProps) {
   const { id } = use(params);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receipt, setReceipt] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const receiptData = localStorage.getItem(`receipt:${id}`);
-    if (receiptData) {
-      setReceipt(JSON.parse(receiptData));
+    async function fetchReceipt() {
+      try {
+        const supabase = createClient();
+        
+        // Fetch order details
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select('id, created_at, total_amount')
+          .eq('id', id)
+          .single();
+
+        if (orderError || !order) {
+          throw new Error('Order not found');
+        }
+
+        // Fetch order items with product names
+        const { data: items, error: itemsError } = await supabase
+          .from('order_items')
+          .select(`
+            id,
+            quantity,
+            price_at_purchase,
+            products (name)
+          `)
+          .eq('order_id', id);
+
+        if (itemsError) {
+          throw new Error('Could not fetch order items');
+        }
+
+        // Parse items
+        let subtotal = 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const receiptItems: ReceiptItem[] = items.map((item: any) => {
+          const itemTotal = item.price_at_purchase * item.quantity;
+          subtotal += itemTotal;
+          // Supabase join returns an object or array of objects depending on relationship.
+          // Since it's a many-to-one (item belongs to product), it's a single object or array of 1.
+          const productName = Array.isArray(item.products) 
+            ? item.products[0]?.name 
+            : item.products?.name;
+            
+          return {
+            id: item.id.toString(),
+            name: productName || 'Unknown Product',
+            qty: item.quantity,
+            price: item.price_at_purchase,
+          };
+        });
+
+        const taxRate = 0.0825; // 8.25% tax
+        const tax = Math.round(subtotal * taxRate);
+
+        setReceipt({
+          id: order.id.toString(),
+          items: receiptItems,
+          subtotal,
+          tax,
+          total: subtotal + tax,
+          createdAt: order.created_at,
+        });
+
+      } catch (err) {
+        console.error('Error fetching receipt:', err);
+        setReceipt(null);
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
+
+    fetchReceipt();
   }, [id]);
 
   const handlePrint = () => {
@@ -42,7 +124,7 @@ export default function ReceiptPage({ params }: ReceiptPageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Receipt Not Found</h1>
-          <p className="text-gray-600 mb-8">The receipt you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-8">The receipt you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/products"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium"

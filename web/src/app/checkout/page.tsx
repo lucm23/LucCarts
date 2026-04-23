@@ -5,6 +5,7 @@ import { useCart } from '@/store/cart';
 import { formatCurrency } from '@/lib/currency';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 
 export default function CheckoutPage() {
@@ -101,9 +102,12 @@ export default function CheckoutPage() {
             {items.map((item) => (
               <div key={item.product.id} className="p-6 border-b border-gray-200 last:border-b-0">
                 <div className="flex items-center">
-                  <img
+                  <Image
                     src={item.product.image}
                     alt={item.product.name}
+                    width={64}
+                    height={64}
+                    unoptimized
                     className="w-16 h-16 object-cover rounded"
                   />
                   <div className="ml-4 flex-1">

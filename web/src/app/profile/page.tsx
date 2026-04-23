@@ -16,48 +16,48 @@ export default function ProfilePage() {
     const router = useRouter();
 
     useEffect(() => {
-        getProfile();
-    }, []);
+        async function getProfile() {
+            try {
+                setLoading(true);
+                const { data: { user } } = await supabase.auth.getUser();
 
-    async function getProfile() {
-        try {
-            setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            setEmail(user.email || '');
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single();
-
-            if (error) {
-                // PGRST116 means no rows returned - this is OK for new users
-                if (error.code === 'PGRST116') {
-                    console.log('No profile found yet - will be created on first update');
-                    // Set default values
-                    setFullName('');
-                    setRole('customer');
-                } else {
-                    console.error('Error loading profile:', error);
-                    throw error;
+                if (!user) {
+                    router.push('/login');
+                    return;
                 }
-            } else if (data) {
-                setFullName(data.full_name || '');
-                setRole(data.role || 'customer');
+
+                setEmail(user.email || '');
+
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('full_name, role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error) {
+                    // PGRST116 means no rows returned - this is OK for new users
+                    if (error.code === 'PGRST116') {
+                        console.log('No profile found yet - will be created on first update');
+                        // Set default values
+                        setFullName('');
+                        setRole('customer');
+                    } else {
+                        console.error('Error loading profile:', error);
+                        throw error;
+                    }
+                } else if (data) {
+                    setFullName(data.full_name || '');
+                    setRole(data.role || 'customer');
+                }
+            } catch (error) {
+                console.error('Error loading user data!', error);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading user data!', error);
-        } finally {
-            setLoading(false);
         }
-    }
+
+        getProfile();
+    }, [router, supabase]);
 
     async function updateProfile() {
         try {
