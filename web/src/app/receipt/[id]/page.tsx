@@ -1,28 +1,27 @@
 'use client';
 
 // Printable receipt (client)
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { formatCurrency } from '@/lib/currency';
 import { Receipt } from '@/store/cart';
 import Link from 'next/link';
 
 interface ReceiptPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function ReceiptPage({ params }: ReceiptPageProps) {
+  const { id } = use(params);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const receiptData = localStorage.getItem(`receipt:${params.id}`);
+    const receiptData = localStorage.getItem(`receipt:${id}`);
     if (receiptData) {
       setReceipt(JSON.parse(receiptData));
     }
     setLoading(false);
-  }, [params.id]);
+  }, [id]);
 
   const handlePrint = () => {
     window.print();
