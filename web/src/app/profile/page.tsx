@@ -1,7 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -14,10 +12,11 @@ export default function ProfilePage() {
     const [role, setRole] = useState('customer');
     const [message, setMessage] = useState<string | null>(null);
 
-    const supabase = createClient();
     const router = useRouter();
 
     useEffect(() => {
+        const supabase = createClient();
+
         async function getProfile() {
             try {
                 setLoading(true);
@@ -59,9 +58,10 @@ export default function ProfilePage() {
         }
 
         getProfile();
-    }, [router, supabase]);
+    }, [router]);
 
     async function updateProfile() {
+        const supabase = createClient();
         try {
             setLoading(true);
             setMessage(null);
@@ -89,6 +89,7 @@ export default function ProfilePage() {
     }
 
     async function handleSignOut() {
+        const supabase = createClient();
         try {
             await supabase.auth.signOut();
             router.push('/login');
